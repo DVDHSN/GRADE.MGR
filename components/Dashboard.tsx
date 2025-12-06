@@ -1,178 +1,158 @@
 import React from 'react';
-import { Grade, AppSettings, getSubjectCode } from '../types';
+import { Grade, AppSettings } from '../types';
 import { Card } from './UI';
 import { TrendLine } from './Charts';
 import { RecentGrades } from './RecentGrades';
-import { Target, TrendingUp, AlertTriangle, CheckCircle, Flame, AlertOctagon } from 'lucide-react';
+import { Target, TrendingUp, AlertTriangle, CheckCircle, Activity, Box, Zap, AlertOctagon } from 'lucide-react';
 
 interface DashboardProps {
   grades: Grade[];
   settings: AppSettings;
+  onUpdateGrade?: (grade: Grade) => void;
+  onDeleteGrade?: (id: string) => void;
 }
 
-export const Dashboard: React.FC<DashboardProps> = ({ grades, settings }) => {
+export const Dashboard: React.FC<DashboardProps> = ({ grades, settings, onUpdateGrade, onDeleteGrade }) => {
   const totalScore = grades.reduce((acc, g) => acc + g.score, 0);
   const averageScore = grades.length > 0 ? Math.round(totalScore / grades.length) : 0;
   
-  // Pass/Fail based on Avg vs D
   const isPassing = averageScore >= settings.gradingScale.D;
-  const progressToGoal = Math.min(100, Math.max(0, (averageScore / settings.targetScore) * 100));
-
-  // --- Insights Logic ---
+  const highestScore = grades.length > 0 ? Math.max(...grades.map(g => g.score)) : 0;
   
-  // 1. Improvements: Check subjects where most recent grade > previous grade
+  // Brutal Insights
   const subjects = Array.from(new Set(grades.map(g => g.courseName))) as string[];
-  let improvedCount = 0;
-  let improvedSubjects: string[] = [];
-
-  subjects.forEach(sub => {
-    const subGrades = grades.filter(g => g.courseName === sub).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-    if (subGrades.length >= 2) {
-      const last = subGrades[subGrades.length - 1];
-      const prev = subGrades[subGrades.length - 2];
-      if (last.score > prev.score) {
-        improvedCount++;
-        improvedSubjects.push(getSubjectCode(sub, last.customCode));
-      }
-    }
-  });
-
-  // 2. Danger Zone: Subjects with latest grade < (D + 5)
   const dangerThreshold = settings.gradingScale.D + 5;
-  const failThreshold = settings.gradingScale.D;
-  
   const atRiskSubjects = subjects.map(sub => {
     const subGrades = grades.filter(g => g.courseName === sub).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
     if (subGrades.length === 0) return null;
     const last = subGrades[subGrades.length - 1];
-    
-    if (last.score < dangerThreshold) {
-      return { 
-        code: getSubjectCode(sub, last.customCode), 
-        score: last.score,
-        isFailing: last.score < failThreshold 
-      };
-    }
+    if (last.score < dangerThreshold) return last;
     return null;
-  }).filter(Boolean) as { code: string; score: number; isFailing: boolean }[];
+  }).filter(Boolean);
 
+  // Brutalist Metric Block with Hover Pop
+  const MetricCard = ({ label, value, icon: Icon, color, subtext, hoverColor }: any) => (
+    <div className={`bg-black border-2 border-zinc-800 p-4 relative group hover:border-white transition-all duration-200 hover:-translate-y-2 hover:-translate-x-1 ${hoverColor}`}>
+        <div className="absolute top-2 right-2 opacity-20 group-hover:opacity-100 transition-all duration-300 group-hover:rotate-12 group-hover:scale-110">
+            <Icon size={40} strokeWidth={1} />
+        </div>
+        <div className="flex flex-col h-full justify-between relative z-10">
+            <span className="text-xs font-bold uppercase tracking-widest text-zinc-500 font-mono mb-4 block border-b-2 border-zinc-900 pb-2 w-max group-hover:border-black group-hover:text-black group-hover:bg-white px-1 transition-colors duration-200">
+                {label}
+            </span>
+            <div>
+                 <span className={`text-5xl font-black tracking-tighter ${color} font-mono block`}>{value}</span>
+                 {subtext && <span className="text-[10px] font-mono text-zinc-600 uppercase mt-1 block group-hover:text-zinc-400 transition-colors">{subtext}</span>}
+            </div>
+        </div>
+    </div>
+  );
 
   return (
-    <div className="flex flex-col gap-6 animate-in fade-in duration-500">
+    <div className="flex flex-col gap-8 animate-in fade-in duration-300">
       
-      {/* Top Stats Row */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {/* Goal Tracker */}
-        <Card className="relative overflow-hidden group">
-            <div className="flex justify-between items-start z-10 relative">
-                <span className="text-zinc-500 font-mono text-[10px] uppercase tracking-widest group-hover:text-zinc-300 transition-colors">Target Goal</span>
-                <Target size={16} className="text-red-500 group-hover:scale-110 transition-transform" />
-            </div>
-            <div className="flex items-end gap-2 mt-2 z-10 relative">
-                <span className="text-4xl font-black text-white">{averageScore}%</span>
-                <span className="text-zinc-500 font-mono text-sm mb-1">/ {settings.targetScore}%</span>
-            </div>
-            <div className="w-full bg-zinc-900 h-2 mt-4 z-10 relative overflow-hidden rounded-full">
-                <div 
-                    className={`h-full transition-all duration-1000 ${averageScore >= settings.targetScore ? 'bg-emerald-500' : 'bg-red-600'}`} 
-                    style={{ width: `${progressToGoal}%`}}
-                />
-            </div>
-        </Card>
-
-        {/* Pass/Fail Indicator */}
-        <Card className={`flex flex-col justify-center items-center group transition-colors duration-500 ${isPassing ? 'hover:bg-emerald-950/20 hover:border-emerald-900/50' : 'hover:bg-red-950/20 hover:border-red-900/50'}`}>
-             <div className="flex flex-col items-center gap-2 group-hover:-translate-y-1 transition-transform duration-300">
-                {isPassing ? <CheckCircle size={32} className="text-emerald-500" /> : <AlertTriangle size={32} className="text-red-500" />}
-                <span className={`text-4xl font-black uppercase tracking-tighter ${isPassing ? 'text-emerald-500' : 'text-red-600'}`}>
-                    {isPassing ? 'PASSING' : 'FAILING'}
-                </span>
-                <span className="text-zinc-600 font-mono text-[10px] uppercase">
-                    Threshold: {settings.gradingScale.D}%
-                </span>
-             </div>
-        </Card>
-
-        {/* Quick Trend */}
-        <Card className="relative group">
-            <div className="flex justify-between items-start mb-2">
-                 <span className="text-zinc-500 font-mono text-[10px] uppercase tracking-widest group-hover:text-zinc-300 transition-colors">Velocity & Trend</span>
-                 <TrendingUp size={16} className="text-zinc-500 group-hover:text-red-500 transition-colors group-hover:scale-110" />
-            </div>
-            <TrendLine grades={grades} />
-        </Card>
-      </div>
-
-      {/* Smart Alerts & Insights Section */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <Card title="Motivational Insights" className="border-l-4 border-l-emerald-600">
-              {improvedCount > 0 ? (
-                  <div className="flex items-start gap-4">
-                      <div className="p-3 bg-emerald-950/30 rounded-full border border-emerald-900/50">
-                          <Flame className="text-emerald-500" size={24} />
-                      </div>
-                      <div>
-                          <h4 className="text-lg font-bold text-white mb-1">On Fire!</h4>
-                          <p className="text-zinc-400 text-sm">
-                              You improved in <strong className="text-white">{improvedCount}</strong> subjects since your last entry.
-                              {improvedSubjects.length > 0 && (
-                                  <span className="block mt-2 text-xs font-mono text-emerald-500 uppercase">
-                                      {improvedSubjects.slice(0, 3).join(', ')}{improvedSubjects.length > 3 ? '...' : ''}
-                                  </span>
-                              )}
-                          </p>
-                      </div>
-                  </div>
-              ) : (
-                  <div className="flex items-center gap-4 opacity-50">
-                      <TrendingUp size={24} />
-                      <p className="text-zinc-500 text-sm">Keep pushing! Consistent effort leads to results.</p>
-                  </div>
-              )}
-          </Card>
-
-          <Card title="Risk Radar" className={`border-l-4 ${atRiskSubjects.length > 0 ? 'border-l-red-600' : 'border-l-zinc-800'}`}>
-              {atRiskSubjects.length > 0 ? (
-                  <div className="flex flex-col gap-3">
-                      <div className="flex items-center gap-2 mb-2">
-                          <AlertOctagon className="text-red-500" size={20} />
-                          <span className="text-white font-bold text-sm">Attention Required</span>
-                      </div>
-                      <div className="flex flex-wrap gap-2">
-                          {atRiskSubjects.map((sub, i) => (
-                              <div key={i} className={`px-3 py-1 rounded border text-xs font-mono font-bold flex items-center gap-2 ${sub.isFailing ? 'bg-red-950/50 border-red-900 text-red-500' : 'bg-orange-950/30 border-orange-900/50 text-orange-400'}`}>
-                                  {sub.code}
-                                  <span className="opacity-80">| {sub.score}%</span>
-                              </div>
-                          ))}
-                      </div>
-                  </div>
-              ) : (
-                  <div className="flex items-center gap-4">
-                      <CheckCircle className="text-emerald-500" size={24} />
-                      <p className="text-zinc-400 text-sm">All subjects are performing within safe thresholds.</p>
-                  </div>
-              )}
-          </Card>
-      </div>
-
-      {/* Main Content Area */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-full">
-         <div className="lg:col-span-2">
-            <RecentGrades grades={grades} />
+      {/* Header */}
+      <div className="border-b-4 border-white pb-4 mb-4 flex justify-between items-end">
+         <div className="flex flex-col">
+            <h1 className="text-6xl font-black uppercase tracking-tighter text-white leading-none hover:text-transparent hover:bg-clip-text hover:bg-gradient-to-r hover:from-white hover:to-zinc-500 transition-all duration-500 cursor-default">STATUS</h1>
+            <span className="text-xs font-mono text-lime-400 bg-zinc-900 w-max px-2 py-1 mt-2 hover:bg-lime-400 hover:text-black transition-colors cursor-help">SYSTEM_OVERVIEW_V6.1</span>
          </div>
-         <div className="lg:col-span-1 flex flex-col gap-6">
-            <Card title="Status" className="flex-1 flex items-center justify-center bg-red-950/10 border-red-900/20 hover:bg-red-950/20 hover:border-red-900/40">
-                 <div className="text-center group-hover:scale-110 transition-transform duration-500">
-                    <p className="text-zinc-500 font-mono text-xs mb-2">CURRENT STANDING</p>
-                    <h1 className="text-8xl font-black text-red-600 leading-none drop-shadow-[0_0_15px_rgba(220,38,38,0.5)]">
-                        {averageScore >= settings.gradingScale.A ? 'A' :
-                         averageScore >= settings.gradingScale.B ? 'B' :
-                         averageScore >= settings.gradingScale.C ? 'C' :
-                         averageScore >= settings.gradingScale.D ? 'D' : 'F'}
-                    </h1>
-                 </div>
+         <div className="hidden md:block text-right">
+             <div className="text-[10px] font-mono text-zinc-500">SESSION ID</div>
+             <div className="font-mono text-xl text-white group cursor-pointer" title="Copy ID">
+                <span className="group-hover:text-lime-400 transition-colors">{crypto.randomUUID().slice(0,8).toUpperCase()}</span>
+             </div>
+         </div>
+      </div>
+
+      {/* Metrics Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <MetricCard 
+            label="AVG. PERFORMANCE" 
+            value={`${averageScore}%`} 
+            icon={Activity} 
+            color="text-white"
+            subtext={isPassing ? "CONDITION: STABLE" : "CONDITION: CRITICAL"}
+            hoverColor="hover:shadow-[8px_8px_0px_0px_#fff]"
+        />
+        <MetricCard 
+            label="DATA POINTS" 
+            value={grades.length} 
+            icon={Box} 
+            color="text-zinc-400 group-hover:text-black"
+            subtext="TOTAL ENTRIES"
+            hoverColor="hover:shadow-[8px_8px_0px_0px_#ccff00] hover:bg-zinc-900"
+        />
+        <MetricCard 
+            label="PEAK SCORE" 
+            value={`${highestScore}%`} 
+            icon={Zap} 
+            color="text-lime-400 group-hover:text-lime-600"
+            subtext="HIGHEST RECORDED"
+            hoverColor="hover:shadow-[8px_8px_0px_0px_#ccff00]"
+        />
+        <MetricCard 
+            label="TARGET OBJ." 
+            value={`${settings.targetScore}%`} 
+            icon={Target} 
+            color="text-red-500 group-hover:text-red-600"
+            subtext="GOAL THRESHOLD"
+            hoverColor="hover:shadow-[8px_8px_0px_0px_#ef4444]"
+        />
+      </div>
+
+      {/* Main Content */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+         
+         <div className="lg:col-span-2 flex flex-col gap-8">
+            <Card title="PERFORMANCE_TRENDS // VISUALIZER" className="h-[400px]">
+                <TrendLine grades={grades} />
             </Card>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                 {/* Risk Box */}
+                 <div className="bg-black border-2 border-red-900/50 p-0 relative overflow-hidden group hover:border-red-500 transition-colors duration-300">
+                    <div className="bg-red-900/20 p-3 border-b-2 border-red-900/50 flex justify-between items-center group-hover:bg-red-900/40 transition-colors">
+                        <span className="text-xs font-bold uppercase text-red-500 font-mono animate-pulse group-hover:text-white">⚠️ AT RISK SUBJECTS</span>
+                        <AlertOctagon size={14} className="text-red-500 group-hover:text-white" />
+                    </div>
+                    <div className="p-4">
+                        {atRiskSubjects.length > 0 ? (
+                            <div className="flex flex-col gap-2">
+                                {atRiskSubjects.map((g: any, i) => (
+                                    <div key={i} className="flex justify-between items-center border-b border-red-900/30 pb-2 font-mono text-sm group-hover:border-red-500/30 transition-colors">
+                                        <span className="text-white font-bold">{g.courseName}</span>
+                                        <span className="text-red-500 bg-red-950/30 px-2 group-hover:bg-red-500 group-hover:text-white transition-colors">{g.score}%</span>
+                                    </div>
+                                ))}
+                            </div>
+                        ) : (
+                            <div className="text-zinc-600 text-xs font-mono uppercase py-8 text-center border-2 border-dashed border-zinc-900 group-hover:border-red-900/50 transition-colors">
+                                NO SYSTEMS FAILING
+                            </div>
+                        )}
+                    </div>
+                 </div>
+
+                 {/* Status Box */}
+                 <div className={`bg-black border-2 p-6 flex flex-col justify-center items-center text-center group transition-all duration-300 hover:-translate-y-1 hover:shadow-[8px_8px_0px_0px_#000] ${isPassing ? 'border-lime-900/50 hover:border-lime-500 hover:shadow-lime-900/20' : 'border-red-900/50 hover:border-red-500 hover:shadow-red-900/20'}`}>
+                     <span className="text-xs font-bold uppercase tracking-widest text-zinc-500 mb-4 border px-2 border-zinc-800 group-hover:border-current transition-colors">ACADEMIC STANDING</span>
+                     <div className="flex flex-col items-center gap-2 transform group-hover:scale-110 transition-transform duration-300">
+                        {isPassing ? <CheckCircle size={48} className="text-lime-500" /> : <AlertTriangle size={48} className="text-red-500" />}
+                        <span className={`text-4xl font-black uppercase tracking-tighter ${isPassing ? 'text-white' : 'text-red-500'}`}>
+                            {isPassing ? 'OPTIMAL' : 'FAILURE'}
+                        </span>
+                     </div>
+                 </div>
+            </div>
+         </div>
+
+         <div className="lg:col-span-1">
+            <RecentGrades 
+              grades={grades} 
+              onUpdate={onUpdateGrade}
+              onDelete={onDeleteGrade}
+            />
          </div>
       </div>
     </div>

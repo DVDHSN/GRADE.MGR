@@ -5,7 +5,7 @@ import { Dashboard } from './components/Dashboard';
 import { Analytics } from './components/Analytics';
 import { Settings } from './components/Settings';
 import { HelpSystem } from './components/HelpSystem';
-import { LayoutGrid, PieChart, PenTool, Settings as SettingsIcon, PanelLeftClose, PanelLeftOpen, GraduationCap, HelpCircle } from 'lucide-react';
+import { LayoutGrid, PieChart, PenTool, Settings as SettingsIcon, PanelLeftClose, PanelLeftOpen, GraduationCap, HelpCircle, Terminal } from 'lucide-react';
 
 type View = 'dashboard' | 'analytics' | 'input' | 'settings';
 
@@ -52,6 +52,14 @@ const App = () => {
     setCurrentView('dashboard');
   };
 
+  const updateGrade = (updatedGrade: Grade) => {
+    setGrades(grades.map(g => g.id === updatedGrade.id ? updatedGrade : g));
+  };
+
+  const deleteGrade = (id: string) => {
+    setGrades(grades.filter(g => g.id !== id));
+  };
+
   const handleImportData = (newGrades: Grade[]) => {
       const cleaned = newGrades.map((g: any) => ({
           ...g,
@@ -73,43 +81,36 @@ const App = () => {
       <button 
         onClick={() => setCurrentView(view)}
         className={`
-          relative group flex items-center gap-4 px-4 py-3 mx-2 rounded-lg transition-all duration-300 hover:translate-x-1
+          relative group flex items-center gap-4 px-4 py-4 mx-0 transition-all duration-200
           ${isActive 
-            ? 'bg-zinc-900 text-white shadow-[0_0_15px_rgba(0,0,0,0.5)]' 
-            : 'text-zinc-500 hover:text-zinc-100 hover:bg-zinc-900/40'}
-          ${isSidebarCollapsed ? 'justify-center' : ''}
+            ? 'bg-white text-black border-y-2 border-black z-10' 
+            : 'text-zinc-500 hover:text-white hover:bg-zinc-900 border-y-2 border-transparent hover:pl-6'}
+          ${isSidebarCollapsed ? 'justify-center hover:pl-4' : ''}
         `}
         title={isSidebarCollapsed ? label : undefined}
       >
         <Icon 
           size={20} 
-          className={`transition-all duration-300 flex-shrink-0 ${isActive ? 'text-red-500 scale-110' : 'group-hover:scale-110'}`} 
+          className={`flex-shrink-0 transition-transform duration-200 ${isActive ? 'text-black' : 'group-hover:text-white group-hover:scale-110'}`} 
+          strokeWidth={2}
         />
         
         <span className={`
-          font-mono text-sm font-bold uppercase tracking-wider whitespace-nowrap transition-all duration-300 origin-left overflow-hidden
+          font-mono text-sm font-bold uppercase tracking-widest whitespace-nowrap transition-all duration-300 overflow-hidden
           ${isSidebarCollapsed ? 'w-0 opacity-0 hidden' : 'w-auto opacity-100 block'}
         `}>
           {label}
         </span>
-
-        {/* Active Indicator Dot */}
-        {isActive && !isSidebarCollapsed && (
-          <div className="absolute right-3 w-1.5 h-1.5 rounded-full bg-red-500 shadow-[0_0_8px_#ef4444]" />
-        )}
         
-        {/* Tooltip for collapsed state */}
-        {isSidebarCollapsed && (
-             <div className="absolute left-full ml-4 px-3 py-1.5 bg-zinc-900 border border-zinc-800 text-xs text-white font-mono uppercase tracking-wider rounded opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50 whitespace-nowrap shadow-xl translate-x-2 group-hover:translate-x-0">
-               {label}
-             </div>
+        {isActive && !isSidebarCollapsed && (
+            <span className="absolute right-4 text-xs animate-pulse">●</span>
         )}
       </button>
     );
   };
 
   return (
-    <div className="flex h-screen w-full bg-zinc-950 text-zinc-100 overflow-hidden selection:bg-red-900 selection:text-white font-sans">
+    <div className="flex h-screen w-full bg-[#050505] text-white overflow-hidden selection:bg-lime-400 selection:text-black font-mono">
       
       {/* Help System Overlay */}
       <HelpSystem view={currentView} isOpen={isHelpOpen} onClose={() => setIsHelpOpen(false)} />
@@ -117,26 +118,22 @@ const App = () => {
       {/* Sidebar */}
       <aside 
         className={`
-          relative flex flex-col bg-zinc-950 border-r border-zinc-900 transition-all duration-500 cubic-bezier(0.4, 0, 0.2, 1) z-30
+          relative flex flex-col bg-black border-r-2 border-zinc-800 transition-all duration-300 z-30
           ${isSidebarCollapsed ? 'w-20' : 'w-72'}
         `}
       >
         {/* Sidebar Header */}
-        <div className="h-24 flex items-center justify-between px-6 mb-2">
+        <div className="h-24 flex items-center justify-center px-2 mb-2 border-b-2 border-zinc-800 bg-zinc-950 select-none">
           {!isSidebarCollapsed ? (
-            <div className="flex items-center gap-3 animate-in fade-in duration-300">
-               <div className="bg-red-600 p-2 rounded shadow-[0_0_15px_rgba(220,38,38,0.5)] group hover:scale-105 transition-transform duration-300">
-                 <GraduationCap className="text-white group-hover:rotate-12 transition-transform duration-300" size={24} />
-               </div>
-               <h1 className="text-2xl font-black uppercase tracking-tighter text-white whitespace-nowrap">
-                 GRADE<span className="text-red-600 inline-block hover:rotate-12 transition-transform cursor-default origin-bottom-left">.MGR</span>
+            <div className="flex flex-col items-center gap-1 animate-in fade-in duration-300 group">
+               <h1 className="text-3xl font-black uppercase tracking-tighter text-white whitespace-nowrap cursor-default italic group-hover:-skew-x-12 transition-transform duration-300">
+                 GRADE<span className="text-transparent bg-clip-text bg-gradient-to-r from-red-600 to-red-500">.MGR</span>
                </h1>
+               <div className="text-[10px] text-zinc-500 tracking-[0.2em] w-full text-center border-t border-zinc-800 pt-1 group-hover:text-red-500 transition-colors">SYS.V6.1</div>
             </div>
           ) : (
             <div className="w-full flex justify-center animate-in fade-in duration-300">
-               <div className="bg-red-600 p-2 rounded shadow-[0_0_15px_rgba(220,38,38,0.5)] hover:scale-110 transition-transform">
-                 <GraduationCap className="text-white" size={20} />
-               </div>
+               <Terminal size={32} className="text-white hover:text-red-500 transition-colors cursor-pointer" />
             </div>
           )}
         </div>
@@ -144,55 +141,67 @@ const App = () => {
         {/* Collapse Toggle */}
         <button 
           onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
-          className="absolute -right-3 top-10 bg-zinc-900 border border-zinc-800 text-zinc-400 p-1.5 rounded-full hover:text-white hover:border-red-600 hover:bg-zinc-800 transition-all z-50 shadow-xl hover:scale-110"
+          className="absolute -right-3 top-28 bg-black border-2 border-zinc-700 text-zinc-400 p-1 hover:text-white hover:border-white transition-all z-50 hover:scale-110 hover:rotate-180 duration-300"
         >
            {isSidebarCollapsed ? <PanelLeftOpen size={14} /> : <PanelLeftClose size={14} />}
         </button>
 
         {/* Navigation Items */}
-        <nav className="flex-1 flex flex-col gap-2 py-4 overflow-y-auto custom-scrollbar">
+        <nav className="flex-1 flex flex-col py-0 overflow-y-auto custom-scrollbar gap-px bg-zinc-900">
            <NavItem view="dashboard" icon={LayoutGrid} label="Dashboard" />
            <NavItem view="analytics" icon={PieChart} label="Analytics" />
-           <NavItem view="input" icon={PenTool} label="Input Protocol" />
+           <NavItem view="input" icon={PenTool} label="Input_Log" />
            
-           <div className={`mt-auto pt-4 mx-4 border-t border-zinc-900 transition-opacity duration-300 ${isSidebarCollapsed ? 'border-transparent' : ''}`}>
-             <NavItem view="settings" icon={SettingsIcon} label="System Config" />
+           <div className={`mt-auto ${isSidebarCollapsed ? '' : 'border-t-2 border-zinc-800'}`}>
+             <NavItem view="settings" icon={SettingsIcon} label="Config" />
            </div>
         </nav>
 
         {/* Footer */}
-        <div className={`p-6 text-center transition-all duration-500 ${isSidebarCollapsed ? 'opacity-0 h-0 overflow-hidden p-0' : 'opacity-100'}`}>
-          <p className="text-zinc-800 font-mono text-[10px] uppercase tracking-widest hover:text-red-900 cursor-default">
-            System V.6.0
+        <div className={`p-4 text-center bg-black border-t-2 border-zinc-800 ${isSidebarCollapsed ? 'opacity-0 h-0 overflow-hidden p-0' : 'opacity-100'}`}>
+          <div className="flex justify-center gap-2 mb-2 group cursor-help">
+            <div className="w-2 h-2 bg-red-500 animate-pulse group-hover:bg-red-400"></div>
+            <div className="w-2 h-2 bg-yellow-500 group-hover:bg-yellow-400 transition-colors delay-75"></div>
+            <div className="w-2 h-2 bg-green-500 group-hover:bg-green-400 transition-colors delay-150"></div>
+          </div>
+          <p className="text-zinc-600 font-mono text-[9px] uppercase tracking-widest cursor-default group-hover:text-zinc-400 transition-colors">
+            ONLINE // SECURE
           </p>
         </div>
       </aside>
 
       {/* Main Content Area */}
-      <main className="flex-1 h-full overflow-y-auto bg-black/20 relative scroll-smooth">
+      <main className="flex-1 h-full overflow-y-auto bg-transparent relative scroll-smooth">
         
-        {/* Help Button (Floating or Header) */}
-        <div className="absolute top-4 right-4 md:right-8 z-40">
+        {/* Help Button */}
+        <div className="absolute top-6 right-6 z-40">
            <button 
              onClick={() => setIsHelpOpen(true)}
-             className="bg-zinc-900/80 backdrop-blur border border-zinc-800 text-zinc-400 hover:text-white hover:border-red-600 w-10 h-10 rounded-full flex items-center justify-center transition-all shadow-lg hover:shadow-red-900/20 group hover:scale-110"
+             className="bg-black border-2 border-zinc-800 text-zinc-500 hover:text-black hover:bg-white hover:border-white w-10 h-10 flex items-center justify-center transition-all duration-200 shadow-[4px_4px_0px_0px_#000] hover:shadow-[6px_6px_0px_0px_#fff] hover:-translate-y-1 hover:-translate-x-1 active:translate-x-0 active:translate-y-0 active:shadow-none"
              title="System Help"
            >
-             <HelpCircle size={20} className="group-hover:rotate-12 transition-transform" />
+             <HelpCircle size={20} />
            </button>
         </div>
 
-        <div className="max-w-7xl mx-auto p-4 md:p-8 lg:p-12 pb-32 animate-in fade-in slide-in-from-bottom-2 duration-500">
+        <div className="max-w-[1600px] mx-auto p-4 md:p-8 lg:p-12 pb-32 animate-in fade-in slide-in-from-bottom-2 duration-300">
           
-          {/* Dynamic Header for Mobile/Context */}
-          <div className="md:hidden mb-6 pb-4 border-b border-zinc-900/50 flex items-center justify-between">
-             <h2 className="text-xl font-bold uppercase tracking-tight text-zinc-400">
+          {/* Mobile Header */}
+          <div className="md:hidden mb-8 border-b-2 border-zinc-800 pb-4 flex items-center justify-between bg-black p-4 border-2">
+             <h2 className="text-xl font-bold uppercase tracking-tight text-white">
                {currentView === 'input' ? 'Input Protocol' : currentView}
              </h2>
-             <span className="text-[10px] font-mono text-zinc-600 uppercase">Mobile View</span>
+             <span className="text-[10px] font-mono text-zinc-500 uppercase border border-zinc-800 px-2 py-1">Mob.View</span>
           </div>
 
-          {currentView === 'dashboard' && <Dashboard grades={grades} settings={settings} />}
+          {currentView === 'dashboard' && (
+            <Dashboard 
+                grades={grades} 
+                settings={settings} 
+                onUpdateGrade={updateGrade}
+                onDeleteGrade={deleteGrade}
+            />
+          )}
           {currentView === 'analytics' && <Analytics grades={grades} settings={settings} />}
           {currentView === 'settings' && (
               <Settings 

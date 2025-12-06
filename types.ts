@@ -37,6 +37,18 @@ export const DEFAULT_SCALE: GradingScale = {
   D: 20
 };
 
+export const SUBJECT_LIST = [
+  "Bahasa Melayu", "Bahasa Inggeris", "Sejarah", "Geografi", "Pendidikan Islam", 
+  "Pendidikan Moral", "Mathematics", "Science", "Pendidikan Jasmani dan Kesihatan", 
+  "Pendidikan Seni Visual", "Pendidikan Muzik", "Reka Bentuk dan Teknologi", 
+  "Asas Sains Komputer", "Pendidikan Sivik", "Bahasa Arab", "Bahasa Cina", 
+  "Bahasa Tamil", "Bahasa Iban", "Bahasa Kadazandusun", "Bahasa Jepun", 
+  "Bahasa Jerman", "Bahasa Perancis", "Additional Mathematics", "Physics", 
+  "Chemistry", "Biology", "Ekonomi", "Perdagangan", "Prinsip Perakaunan", 
+  "Sosiologi", "Literature in English", "Sains Komputer", "Pendidikan Al-Quran dan As-Sunnah",
+  "Pendidikan Syariah Islamiah"
+];
+
 export const SUBJECT_CODES: Record<string, string> = {
   "Bahasa Melayu": "BML",
   "Bahasa Inggeris": "ENG",

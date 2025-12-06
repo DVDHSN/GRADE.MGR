@@ -3,28 +3,52 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>GRADE.MGR</title>
+    <title>GRADE.MGR // SYSTEM</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-      /* Custom scrollbar for brutalist feel */
-      ::-webkit-scrollbar {
-        width: 8px;
-        height: 8px;
+      :root {
+        --bg-color: #050505;
+        --grid-color: #222;
       }
-      ::-webkit-scrollbar-track {
-        background: #09090b; 
+      
+      body {
+        background-color: var(--bg-color);
+        background-image: radial-gradient(var(--grid-color) 1px, transparent 1px);
+        background-size: 20px 20px;
+      }
+
+      /* BRUTAL SCROLLBAR */
+      ::-webkit-scrollbar {
+        width: 16px;
+        height: 16px;
+        background: #000;
+        border-left: 2px solid #333;
       }
       ::-webkit-scrollbar-thumb {
-        background: #27272a; 
-        border-radius: 4px;
+        background: #fff; 
+        border: 2px solid #000;
+        box-shadow: inset 2px 2px 0px rgba(0,0,0,0.5);
       }
       ::-webkit-scrollbar-thumb:hover {
         background: #ef4444; 
       }
+      ::-webkit-scrollbar-corner {
+        background: #000;
+      }
       
       /* Utilities */
       .custom-scrollbar::-webkit-scrollbar {
-        width: 4px;
+        width: 8px;
+      }
+      
+      .brutal-shadow {
+        box-shadow: 4px 4px 0px 0px currentColor;
+      }
+      .brutal-shadow-lg {
+        box-shadow: 8px 8px 0px 0px #000;
+      }
+      .brutal-border {
+        border: 2px solid currentColor;
       }
     </style>
   <script type="importmap">
@@ -41,7 +65,7 @@
 }
 </script>
 </head>
-  <body class="bg-zinc-950 text-zinc-100 antialiased selection:bg-red-600 selection:text-white overflow-y-scroll">
+  <body class="bg-[#050505] text-white antialiased selection:bg-lime-400 selection:text-black overflow-y-scroll font-mono">
     <div id="root"></div>
   </body>
 </html>
