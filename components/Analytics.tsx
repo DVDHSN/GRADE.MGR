@@ -1,7 +1,7 @@
 import React from 'react';
 import { Grade, AppSettings, ExamType, getSubjectCode } from '../types';
 import { Card } from './UI';
-import { GradeHistogram, SubjectRadar, YearComparison, GradePieChart, COLORS } from './Charts';
+import { GradeHistogram, SubjectRadar, YearComparison, GradePieChart, COLORS, SubjectTrendChart } from './Charts';
 
 interface AnalyticsProps {
   grades: Grade[];
@@ -57,10 +57,17 @@ export const Analytics: React.FC<AnalyticsProps> = ({ grades, settings }) => {
       </div>
 
       {/* Progression & Comparison */}
+      <Card title="Subject Performance History" className="col-span-full">
+         <div className="mb-4 text-xs text-zinc-500 font-mono">
+            Tracking score progression per subject over time. Use the slider below to zoom.
+         </div>
+         <SubjectTrendChart grades={grades} />
+      </Card>
+
       <div className="grid grid-cols-1 gap-6">
-         <Card title="Form / Year Comparison">
+         <Card title="Academic Form Comparison">
             <div className="mb-4 text-xs text-zinc-500 font-mono">
-                Compare your academic performance across different years (e.g., Form 4 vs Form 5).
+                Compare your academic performance across different Forms (e.g., Form 4 vs Form 5).
             </div>
             <YearComparison grades={grades} />
          </Card>

@@ -14,6 +14,29 @@ interface SettingsProps {
 export const Settings: React.FC<SettingsProps> = ({ grades, settings, onUpdateSettings, onImportData, onClearData }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Real-time validation for settings
+  const getValidationErrors = () => {
+    const errors: Record<string, string> = {};
+    const { A, B, C, D } = settings.gradingScale;
+    
+    // Check hierarchy: A > B > C > D
+    if (A <= B) errors.A = `Must be > ${B}`;
+    if (B <= C) errors.B = `Must be > ${C}`;
+    if (C <= D) errors.C = `Must be > ${D}`;
+    if (D < 0) errors.D = "Cannot be negative";
+    
+    // Check absolute bounds
+    if (A > 100) errors.A = "Max 100";
+    
+    if (settings.targetScore < 0 || settings.targetScore > 100) {
+        errors.targetScore = "0 - 100 Only";
+    }
+    
+    return errors;
+  };
+
+  const errors = getValidationErrors();
+
   const handleScaleChange = (key: keyof GradingScale, value: string) => {
     onUpdateSettings({
         ...settings,
@@ -111,24 +134,28 @@ export const Settings: React.FC<SettingsProps> = ({ grades, settings, onUpdateSe
                         type="number" 
                         value={settings.gradingScale.A} 
                         onChange={(e) => handleScaleChange('A', e.target.value)}
+                        error={errors.A}
                     />
                     <Input 
                         label="Min for B" 
                         type="number" 
                         value={settings.gradingScale.B} 
                         onChange={(e) => handleScaleChange('B', e.target.value)}
+                        error={errors.B}
                     />
                     <Input 
                         label="Min for C" 
                         type="number" 
                         value={settings.gradingScale.C} 
                         onChange={(e) => handleScaleChange('C', e.target.value)}
+                        error={errors.C}
                     />
                     <Input 
                         label="Min for D (Pass)" 
                         type="number" 
                         value={settings.gradingScale.D} 
                         onChange={(e) => handleScaleChange('D', e.target.value)}
+                        error={errors.D}
                     />
                 </div>
             </div>
@@ -143,6 +170,7 @@ export const Settings: React.FC<SettingsProps> = ({ grades, settings, onUpdateSe
                     type="number" 
                     value={settings.targetScore} 
                     onChange={(e) => onUpdateSettings({...settings, targetScore: Number(e.target.value)})}
+                    error={errors.targetScore}
                 />
                 <div className="p-4 border border-zinc-800 bg-zinc-900/50 text-zinc-400 text-xs font-mono">
                     Changes apply immediately to all analytics.

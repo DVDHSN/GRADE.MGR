@@ -7,23 +7,49 @@ interface GradeFormProps {
   onAddGrade: (grade: Grade) => void;
 }
 
-const YEARS = Array.from({ length: 11 }, (_, i) => (2020 + i).toString());
+const FORMS = ["Form 1", "Form 2", "Form 3", "Form 4", "Form 5"];
 
 export const GradeForm: React.FC<GradeFormProps> = ({ onAddGrade }) => {
   const [subjectSelect, setSubjectSelect] = useState(SUBJECT_LIST[0]);
   const [customSubject, setCustomSubject] = useState('');
   const [customCode, setCustomCode] = useState('');
   const [type, setType] = useState<ExamType>(ExamType.MIDTERM);
-  const [year, setYear] = useState(new Date().getFullYear().toString());
+  const [year, setYear] = useState(FORMS[3]); // Default to Form 4
   const [score, setScore] = useState('');
+  
+  // Validation State
+  const [errors, setErrors] = useState<Record<string, string>>({});
+
+  const validate = () => {
+    const newErrors: Record<string, string> = {};
+    
+    if (subjectSelect === "(Custom)" && !customSubject.trim()) {
+        newErrors.customSubject = "Subject Name Required";
+    }
+
+    if (!score) {
+        newErrors.score = "Score Required";
+    } else {
+        const numScore = Number(score);
+        if (isNaN(numScore)) {
+            newErrors.score = "Must be a number";
+        } else if (numScore < 0 || numScore > 100) {
+            newErrors.score = "Range: 0 - 100";
+        }
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!validate()) return;
+
     const isCustom = subjectSelect === "(Custom)";
     const finalCourseName = isCustom ? customSubject.toUpperCase() : subjectSelect;
     
-    if (!finalCourseName || !score) return;
-
     const newGrade: Grade = {
       id: crypto.randomUUID(),
       courseName: finalCourseName,
@@ -42,6 +68,21 @@ export const GradeForm: React.FC<GradeFormProps> = ({ onAddGrade }) => {
       setCustomCode('');
     }
     setScore('');
+    setErrors({});
+  };
+
+  const handleScoreChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setScore(e.target.value);
+    if (errors.score) {
+        setErrors(prev => ({ ...prev, score: '' }));
+    }
+  };
+
+  const handleCustomSubjectChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setCustomSubject(e.target.value);
+    if (errors.customSubject) {
+        setErrors(prev => ({ ...prev, customSubject: '' }));
+    }
   };
 
   const examOptions = Object.values(ExamType).map(t => ({ value: t, label: t }));
@@ -49,7 +90,7 @@ export const GradeForm: React.FC<GradeFormProps> = ({ onAddGrade }) => {
     ...SUBJECT_LIST.sort().map(s => ({ value: s, label: s })),
     { value: "(Custom)", label: "(Custom) - Enter manually" }
   ];
-  const yearOptions = YEARS.map(y => ({ value: y, label: y }));
+  const formOptions = FORMS.map(y => ({ value: y, label: y }));
 
   return (
     <Card title="Input Protocol" className="h-full max-w-2xl mx-auto border-red-900/30">
@@ -74,10 +115,11 @@ export const GradeForm: React.FC<GradeFormProps> = ({ onAddGrade }) => {
                       label="Subject Name"
                       placeholder="e.g. ROBOTICS" 
                       value={customSubject}
-                      onChange={(e) => setCustomSubject(e.target.value)}
+                      onChange={handleCustomSubjectChange}
                       required
                       autoFocus
                       className="border-lime-500/50"
+                      error={errors.customSubject}
                     />
                   </div>
                   <div className="col-span-1">
@@ -95,8 +137,8 @@ export const GradeForm: React.FC<GradeFormProps> = ({ onAddGrade }) => {
             </div>
             
             <Select 
-                label="Academic Year"
-                options={yearOptions}
+                label="Academic Form"
+                options={formOptions}
                 value={year}
                 onChange={(e) => setYear(e.target.value)}
             />
@@ -115,9 +157,10 @@ export const GradeForm: React.FC<GradeFormProps> = ({ onAddGrade }) => {
             min="0" 
             max="100" 
             value={score}
-            onChange={(e) => setScore(e.target.value)}
+            onChange={handleScoreChange}
             required
             className="text-red-500 font-bold text-xl"
+            error={errors.score}
           />
         </div>
 
