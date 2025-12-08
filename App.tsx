@@ -6,7 +6,7 @@ import { Analytics } from './components/Analytics';
 import { Settings } from './components/Settings';
 import { HelpSystem } from './components/HelpSystem';
 import { ConfirmModal } from './components/UI';
-import { LayoutGrid, PieChart, PenTool, Settings as SettingsIcon, PanelLeftClose, PanelLeftOpen, GraduationCap, HelpCircle, Terminal, Command } from 'lucide-react';
+import { LayoutGrid, PieChart, PenTool, Settings as SettingsIcon, PanelLeftClose, PanelLeftOpen, GraduationCap, HelpCircle, Terminal, Command, Keyboard } from 'lucide-react';
 
 type View = 'dashboard' | 'analytics' | 'input' | 'settings';
 
@@ -40,6 +40,7 @@ const App = () => {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isHelpOpen, setIsHelpOpen] = useState(false);
   const [isResetModalOpen, setIsResetModalOpen] = useState(false);
+  const [lastCommand, setLastCommand] = useState<string | null>(null);
 
   useEffect(() => {
     localStorage.setItem('grade_mgr_data', JSON.stringify(grades));
@@ -49,17 +50,75 @@ const App = () => {
     localStorage.setItem('grade_mgr_settings', JSON.stringify(settings));
   }, [settings]);
 
+  // Keyboard Shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+        const target = e.target as HTMLElement;
+        const isInput = ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName) || target.isContentEditable;
+
+        if (isInput) {
+            if (e.key === 'Escape') target.blur();
+            return;
+        }
+
+        const key = e.key.toLowerCase();
+        
+        switch (key) {
+            case 'd':
+                setCurrentView('dashboard');
+                triggerCommand('NAV // DASHBOARD');
+                break;
+            case 'a':
+                setCurrentView('analytics');
+                triggerCommand('NAV // ANALYTICS');
+                break;
+            case 'g':
+                setCurrentView('input');
+                triggerCommand('EXEC // INPUT_PROTOCOL');
+                setTimeout(() => {
+                    const input = document.querySelector('main select, main input') as HTMLElement;
+                    if (input) input.focus();
+                }, 50);
+                break;
+            case 's':
+                setCurrentView('settings');
+                triggerCommand('NAV // CONFIG');
+                break;
+            case '?':
+                setIsHelpOpen(prev => !prev);
+                triggerCommand(isHelpOpen ? 'SYS // CLOSE_HELP' : 'SYS // OPEN_HELP');
+                break;
+             case '[':
+                setIsSidebarCollapsed(prev => !prev);
+                triggerCommand('UI // TOGGLE_SIDEBAR');
+                break;
+        }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isHelpOpen]);
+
+  const triggerCommand = (cmd: string) => {
+      setLastCommand(cmd);
+      // Clear after animation
+      setTimeout(() => setLastCommand(null), 2000);
+  };
+
   const addGrade = (grade: Grade) => {
     setGrades([...grades, grade]);
     setCurrentView('dashboard');
+    triggerCommand('DATA // ENTRY_ADDED');
   };
 
   const updateGrade = (updatedGrade: Grade) => {
     setGrades(grades.map(g => g.id === updatedGrade.id ? updatedGrade : g));
+    triggerCommand('DATA // ENTRY_UPDATED');
   };
 
   const deleteGrade = (id: string) => {
     setGrades(grades.filter(g => g.id !== id));
+    triggerCommand('DATA // ENTRY_PURGED');
   };
 
   const handleImportData = (newGrades: Grade[]) => {
@@ -69,6 +128,7 @@ const App = () => {
       }));
       setGrades(prev => [...prev, ...cleaned]);
       setCurrentView('dashboard');
+      triggerCommand('SYS // DATA_IMPORTED');
   };
 
   const handleClearData = () => {
@@ -79,21 +139,22 @@ const App = () => {
     setGrades([]);
     setSettings({ targetScore: 75, gradingScale: DEFAULT_SCALE });
     setIsResetModalOpen(false);
+    triggerCommand('SYS // FACTORY_RESET');
   };
 
-  const NavItem = ({ view, icon: Icon, label }: { view: View; icon: any; label: string }) => {
+  const NavItem = ({ view, icon: Icon, label, shortcut }: { view: View; icon: any; label: string; shortcut: string }) => {
     const isActive = currentView === view;
     return (
       <button 
         onClick={() => setCurrentView(view)}
         className={`
-          relative group flex items-center gap-4 px-6 py-5 mx-0 transition-all duration-200
+          relative group flex items-center gap-4 px-6 py-5 mx-0 transition-all duration-200 w-full
           ${isActive 
             ? 'bg-zinc-100 text-black border-y-4 border-black z-10 -my-0.5' 
             : 'text-zinc-500 hover:text-white hover:bg-zinc-900 border-y-4 border-transparent hover:border-zinc-800'}
           ${isSidebarCollapsed ? 'justify-center px-0' : ''}
         `}
-        title={isSidebarCollapsed ? label : undefined}
+        title={isSidebarCollapsed ? `${label} [${shortcut}]` : undefined}
       >
         <Icon 
           size={24} 
@@ -101,15 +162,22 @@ const App = () => {
           strokeWidth={isActive ? 3 : 2}
         />
         
-        <span className={`
-          font-mono text-base font-black uppercase tracking-widest whitespace-nowrap transition-all duration-300 overflow-hidden
-          ${isSidebarCollapsed ? 'w-0 opacity-0 hidden' : 'w-auto opacity-100 block'}
-        `}>
-          {label}
-        </span>
+        {!isSidebarCollapsed && (
+             <div className="flex items-center justify-between w-full overflow-hidden">
+                <span className={`
+                  font-mono text-base font-black uppercase tracking-widest whitespace-nowrap transition-all duration-300
+                  ${isActive ? 'text-black' : ''}
+                `}>
+                  {label}
+                </span>
+                <span className={`text-[10px] font-mono border px-1 ${isActive ? 'border-black text-black' : 'border-zinc-700 text-zinc-600 group-hover:text-lime-400 group-hover:border-lime-400'}`}>
+                    {shortcut}
+                </span>
+             </div>
+        )}
         
         {isActive && !isSidebarCollapsed && (
-            <span className="absolute right-4 text-xs animate-pulse font-black text-red-500">● ACT</span>
+            <span className="absolute right-1 top-1 text-[8px] animate-pulse font-black text-red-500">●</span>
         )}
       </button>
     );
@@ -129,6 +197,16 @@ const App = () => {
         onConfirm={performFactoryReset}
         onCancel={() => setIsResetModalOpen(false)}
       />
+
+      {/* Command Toast Feedback */}
+      {lastCommand && (
+          <div className="fixed bottom-8 right-8 z-[100] animate-in slide-in-from-bottom-5 fade-in duration-200 pointer-events-none">
+              <div className="bg-black border-2 border-lime-400 text-lime-400 px-4 py-2 font-mono font-bold uppercase tracking-widest text-xs shadow-[4px_4px_0px_0px_rgba(0,0,0,0.5)] flex items-center gap-2">
+                  <Terminal size={14} className="animate-pulse" />
+                  <span className="mr-2">{lastCommand}</span>
+              </div>
+          </div>
+      )}
 
       {/* Sidebar */}
       <aside 
@@ -163,18 +241,19 @@ const App = () => {
         <button 
           onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
           className="absolute -right-5 top-[120px] bg-black border-2 border-zinc-500 text-zinc-400 w-10 h-10 flex items-center justify-center hover:text-white hover:border-white transition-all z-50 hover:scale-110 hover:shadow-[4px_4px_0px_0px_#ccff00] active:translate-y-1 active:shadow-none"
+          title="Toggle Sidebar ([)"
         >
            {isSidebarCollapsed ? <PanelLeftOpen size={16} /> : <PanelLeftClose size={16} />}
         </button>
 
         {/* Navigation Items */}
         <nav className="flex-1 flex flex-col py-0 overflow-y-auto custom-scrollbar gap-0 bg-[#0e0e10]">
-           <NavItem view="dashboard" icon={LayoutGrid} label="Dashboard" />
-           <NavItem view="analytics" icon={PieChart} label="Analytics" />
-           <NavItem view="input" icon={PenTool} label="Input_Log" />
+           <NavItem view="dashboard" icon={LayoutGrid} label="Dashboard" shortcut="D" />
+           <NavItem view="analytics" icon={PieChart} label="Analytics" shortcut="A" />
+           <NavItem view="input" icon={PenTool} label="Input_Log" shortcut="G" />
            
            <div className={`mt-auto ${isSidebarCollapsed ? '' : 'border-t-4 border-zinc-800'}`}>
-             <NavItem view="settings" icon={SettingsIcon} label="Config" />
+             <NavItem view="settings" icon={SettingsIcon} label="Config" shortcut="S" />
            </div>
         </nav>
 
@@ -196,13 +275,18 @@ const App = () => {
         
         {/* Help Button */}
         <div className="absolute top-8 right-8 z-40 hidden md:block">
-           <button 
-             onClick={() => setIsHelpOpen(true)}
-             className="bg-[#18181b] border-2 border-zinc-700 text-zinc-500 hover:text-black hover:bg-lime-400 hover:border-black w-12 h-12 flex items-center justify-center transition-all duration-200 shadow-[4px_4px_0px_0px_#000] hover:shadow-[6px_6px_0px_0px_#fff] hover:-translate-y-1 hover:-translate-x-1 active:translate-x-0 active:translate-y-0 active:shadow-none"
-             title="System Help"
-           >
-             <HelpCircle size={24} strokeWidth={2} />
-           </button>
+           <div className="flex items-center gap-4">
+             <div className="text-[10px] text-zinc-600 font-mono uppercase tracking-widest border border-zinc-800 px-2 py-1 rounded bg-black/50 backdrop-blur-sm">
+                Press [?] for Shortcuts
+             </div>
+             <button 
+               onClick={() => setIsHelpOpen(true)}
+               className="bg-[#18181b] border-2 border-zinc-700 text-zinc-500 hover:text-black hover:bg-lime-400 hover:border-black w-12 h-12 flex items-center justify-center transition-all duration-200 shadow-[4px_4px_0px_0px_#000] hover:shadow-[6px_6px_0px_0px_#fff] hover:-translate-y-1 hover:-translate-x-1 active:translate-x-0 active:translate-y-0 active:shadow-none"
+               title="System Help [?]"
+             >
+               <HelpCircle size={24} strokeWidth={2} />
+             </button>
+           </div>
         </div>
 
         <div className="max-w-[1800px] mx-auto p-4 md:p-8 lg:p-12 pb-32 animate-in fade-in slide-in-from-bottom-2 duration-300">
